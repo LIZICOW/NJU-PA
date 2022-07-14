@@ -3,6 +3,7 @@
 #include <cpu/difftest.h>
 #include <isa-all-instr.h>
 #include <locale.h>
+//#include <sdb.h>
 
 /* The assembly code of instructions executed is only output to the screen
  * when the number of instructions executed is less than this value.
@@ -20,13 +21,23 @@ rtlreg_t tmp_reg[4];
 
 void device_update();
 void fetch_decode(Decode *s, vaddr_t pc);
+void scan_wp(bool* change);
 
 static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 #ifdef CONFIG_ITRACE_COND
   if (ITRACE_COND) log_write("%s\n", _this->logbuf);
 #endif
+
   if (g_print_step) { IFDEF(CONFIG_ITRACE, puts(_this->logbuf)); }
   IFDEF(CONFIG_DIFFTEST, difftest_step(_this->pc, dnpc));
+
+  bool change = false;
+  scan_wp(&change);
+  if(change == true){
+    if(nemu_state.state != NEMU_END)
+	nemu_state.state = NEMU_STOP;
+    printf("Trigger watchpoint!\n");
+  }
 }
 
 #include <isa-exec.h>

@@ -10,14 +10,80 @@ static char buf[65536] = {};
 static char code_buf[65536 + 128] = {}; // a little larger than `buf`
 static char *code_format =
 "#include <stdio.h>\n"
+"#include <signal.h>\n"
+"#include <setjmp.h>\n"
+"jmp_buf env;"
+"void handler (int signal) {"
+"  longjmp(env, 2);"
+"}"
 "int main() { "
-"  unsigned result = %s; "
-"  printf(\"%%u\", result); "
+"  {"
+"     struct sigaction sa = {};"
+"     sa.sa_handler = handler;"
+"     if(sigaction(SIGFPE, &sa, NULL) == -1) {"
+"         perror(\"sigaction\");"
+"     }"
+"  }"
+"  if(0 == setjmp(env)) {"
+"      unsigned result = %s; "
+"      printf(\"%%u\", result); "
+"  }"
+"  else"
+"     printf(\"#100\");"
+
 "  return 0; "
 "}";
 
+static int buf_index = 0;
+
+static int choose(int lim) {
+        return rand() % lim;
+}
+
+static void gen_num(){
+        int num = choose(256), size = 0;
+        size = snprintf(buf+buf_index, 65536 - buf_index, "%d", num);
+        buf_index += size;
+}
+
+static void gen_rand_op() {
+        char op;
+        switch (choose(4)){
+                case 0:
+                        op = '+';
+                        break;
+                case 1:
+                        op = '-';
+                        break;
+                case 2:
+                        op = '*';
+                        break;
+                case 3:
+                        op = '/';
+                        break;
+        }
+        buf[buf_index++] = op;
+}
+
+static void gen(char symbol) {
+        buf[buf_index++] = symbol;
+}
 static void gen_rand_expr() {
-  buf[0] = '\0';
+  switch (choose(3)){
+          case 0:
+                  gen_num();
+                  break;
+          case 1:
+                  gen('(');
+                  gen_rand_expr();
+                  gen(')');
+                  break;
+          case 2:
+                  gen_rand_expr();
+                  gen_rand_op();
+                  gen_rand_expr();
+                  break;
+  }
 }
 
 int main(int argc, char *argv[]) {

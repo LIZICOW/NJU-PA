@@ -9,8 +9,26 @@ const char *regs[] = {
 };
 
 void isa_reg_display() {
+  for(int i=0; i < 32; i ++)
+    printf("%s\t0x%08x\t%-15u\n", regs[i], cpu.gpr[i]._32, cpu.gpr[i]._32);
+  printf("%s\t0x%08x\t%-15u\n", "pc", cpu.pc, cpu.pc);
 }
 
 word_t isa_reg_str2val(const char *s, bool *success) {
-  return 0;
+  word_t ret = 0;
+  int i = 0;
+  if(strcmp(s, "pc") == 0){
+    *success = true;
+    return cpu.pc;
+  }
+  for(;i < 32;i++){
+    if(strcmp(regs[i], s) == 0){
+      //printf("%s\t0x%08x\t%-15u\n", regs[i], cpu.gpr[i]._32, cpu.gpr[i]._32);
+      ret = cpu.gpr[i]._32;
+      *success = true;
+    }
+  }
+  if(i == 32)
+    success = 0;
+  return ret;
 }
